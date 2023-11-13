@@ -5,9 +5,17 @@
 #define _LCD_COLUMNS 16
 #define _LCD_ROWS 2
 
+enum E_BtnKey {
+  E_BtnKey_DEFAULT =  0,
+  E_BtnKey_MAIN =     1,
+  E_BtnKey_LEDS =     2,
+  E_BtnKeyEND
+};
+
 struct KeyValue {
     int key;
     char value[15];
+    E_BtnKey btnKey;
 };
 
 struct MenuItem {
@@ -39,30 +47,34 @@ char msgs[5][15] = {
                     "Select Key OK " };
 
 KeyValue msgInterface[] = {
-    {0,           "Source set    "},
-    {_RED_LED,    "Red light     "},
-    {_GREEN_LED,  "Green light   "},
-    {_BLUE_LED,   "Blue light    "},
-    {_WHITE_LED,  "White light   "},
-    {5,           "Start         "},
-    {6,           "Stop          "},
-    {7,           "Send once     "},
-    {8,           "Send continue "}
+    {0,           "Source set    ", E_BtnKey_MAIN},
+    {_RED_LED,    "Red light     ", E_BtnKey_LEDS},
+    {_GREEN_LED,  "Green light   ", E_BtnKey_LEDS},
+    {_BLUE_LED,   "Blue light    ", E_BtnKey_LEDS},
+    {_WHITE_LED,  "White light   ", E_BtnKey_LEDS},
+    {5,           "Start         ", E_BtnKey_MAIN},
+    {6,           "Stop          ", E_BtnKey_MAIN},
+    {7,           "Send once     ", E_BtnKey_MAIN},
+    {8,           "Send continue ", E_BtnKey_MAIN},
+    {9,           "Calibration   ", E_BtnKey_MAIN}
 };
 
 MenuItem menuItems[] = {
-    {msgInterface[0], {0}, nullptr, nullptr},
-    {msgInterface[1], {0}, nullptr, nullptr},
-    {msgInterface[2], {0}, nullptr, nullptr},
-    {msgInterface[3], {0}, nullptr, nullptr},
-    {msgInterface[4], {0}, nullptr, nullptr},
-    {msgInterface[5], {0}, nullptr, nullptr},
-    {msgInterface[6], {0}, nullptr, nullptr},
-    {msgInterface[7], {0}, nullptr, nullptr},
-    {msgInterface[8], {0}, nullptr, nullptr}
+    {msgInterface[0], {0}, nullptr, nullptr}, // "Source set    "
+    {msgInterface[1], {0}, nullptr, nullptr}, // "Red light     "
+    {msgInterface[2], {0}, nullptr, nullptr}, // "Green light   "
+    {msgInterface[3], {0}, nullptr, nullptr}, // "Blue light    "
+    {msgInterface[4], {0}, nullptr, nullptr}, // "White light   "
+    {msgInterface[5], {0}, nullptr, nullptr}, // "Start         "
+    {msgInterface[6], {0}, nullptr, nullptr}, // "Stop          "
+    {msgInterface[7], {0}, nullptr, nullptr}, // "Send once     "
+    {msgInterface[8], {0}, nullptr, nullptr}  // "Send continue "
 };
 
 MenuItem* currentMenuItem = &menuItems[0]; // Start from the first item
+
+// Create an array to store links to menu items
+MenuItem* menuHistory[2] = {currentMenuItem, nullptr}; // Adjust the size as needed
 
 // variables
 const unsigned int  adc_key_val[5] ={30, 150, 360, 535, 760};
@@ -91,7 +103,7 @@ void setup() {
   initLcd();
   initSerial();
 
-  //configureNode();
+  configureNode();
   
 }
 
@@ -192,12 +204,20 @@ void stateM(const unsigned int &pressKey) {
    lcd.setCursor(0,1);  //line=2, x=0
    lcd.write(msgs[pressKey]);
 
+
+  // menu
+   // Example usage when you want to change the menu item to the second item
+   updateCurrentMenuItem(&menuItems[1]);
+
    startLed(relayWhite);
    stopLed(relayWhite);
 
    delay(2000);
    startLed(_BLUE_LED);
    stopLed(_BLUE_LED);
+
+  // menu
+   
 }
 
 void startLed(unsigned int ledPin) {
@@ -229,4 +249,18 @@ void configureNode() {
     menuItems[i].previous = &menuItems[(i - 1 + itemCount) % itemCount];
     menuItems[i].next = &menuItems[(i + 1) % itemCount];
   }
+}
+
+// When you want to update the current menu item and store the history:
+void updateCurrentMenuItem(MenuItem* newMenuItem) {
+    if (menuHistory[0] != nullptr) {
+        // Move the current menu item to the history
+        menuHistory[1] = menuHistory[0];
+    }
+  
+    // Set the new current menu item
+    menuHistory[0] = newMenuItem;
+    
+    // Update the currentMenuItem pointer
+    currentMenuItem = newMenuItem;
 }
