@@ -5,6 +5,14 @@
 #define _LCD_COLUMNS 16
 #define _LCD_ROWS 2
 
+enum E_BoardKey {
+  E_RIGHT_KEY   = 0,
+  E_UP_KEY      = 1,
+  E_DOWN_KEY    = 2,
+  E_LEFT_KEY    = 3,
+  E_SELECT_KEY  = 4
+};
+
 enum E_BtnKey {
   E_BtnKey_DEFAULT =  0,
   E_BtnKey_MAIN =     1,
@@ -38,7 +46,7 @@ const unsigned int relayRed = _RED_LED, relayGreen = _GREEN_LED, relayBlue = _BL
 const int rs = 8, en = 9, d4 = 4, d5 = 5, d6 = 6, d7 = 7; // PB0; PB1; PD4; PD5; PD6; PD7
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
  
-//Key message
+//Key message = E_BoardKey
 char msgs[5][15] = {
                     "Right Key OK  ", 
                     "Up Key OK     ", 
@@ -48,10 +56,10 @@ char msgs[5][15] = {
 
 KeyValue msgInterface[] = {
     {0,           "Source set    ", E_BtnKey_MAIN},
-    {_RED_LED,    "Red light     ", E_BtnKey_LEDS},
-    {_GREEN_LED,  "Green light   ", E_BtnKey_LEDS},
-    {_BLUE_LED,   "Blue light    ", E_BtnKey_LEDS},
-    {_WHITE_LED,  "White light   ", E_BtnKey_LEDS},
+    {relayRed,    "Red light     ", E_BtnKey_LEDS},
+    {relayGreen,  "Green light   ", E_BtnKey_LEDS},
+    {relayBlue,   "Blue light    ", E_BtnKey_LEDS},
+    {relayWhite,  "White light   ", E_BtnKey_LEDS},
     {5,           "Start         ", E_BtnKey_MAIN},
     {6,           "Stop          ", E_BtnKey_MAIN},
     {7,           "Send once     ", E_BtnKey_MAIN},
@@ -68,7 +76,8 @@ MenuItem menuItems[] = {
     {msgInterface[5], {0}, nullptr, nullptr}, // "Start         "
     {msgInterface[6], {0}, nullptr, nullptr}, // "Stop          "
     {msgInterface[7], {0}, nullptr, nullptr}, // "Send once     "
-    {msgInterface[8], {0}, nullptr, nullptr}  // "Send continue "
+    {msgInterface[8], {0}, nullptr, nullptr}, // "Send continue "
+    {msgInterface[9], {0}, nullptr, nullptr}  // "Calibration "
 };
 
 MenuItem* currentMenuItem = &menuItems[0]; // Start from the first item
@@ -95,12 +104,17 @@ void startLed(unsigned int ledPin);
 void stopLed(unsigned int ledPin);
 void stateM(const unsigned int &pressKey);
 void configureNode();
+
+
+
+
 //************************************************************
 //************************************************************
 void setup() {
 
   initRelayLed();
   initLcd();
+  
   initSerial();
 
   configureNode();
@@ -114,6 +128,14 @@ void loop() {
 }
 //************************************************************
 //************************************************************
+
+
+
+
+
+
+
+
 
 
 void initRelayLed(void) {
@@ -151,7 +173,6 @@ void initSerial(void) {
 }
 
 void serialCommunication() {
-   #if 0
     // when characters arrive over the serial port...
     if (Serial.available()) {
       // wait a bit for the entire message to arrive
@@ -164,7 +185,6 @@ void serialCommunication() {
         lcd.write(Serial.read());
       }
     }
-  #endif
 }
 
 void keyPad(void) {
@@ -179,7 +199,9 @@ void keyPad(void) {
 		if (key != oldkey) {			
 		oldkey = key;
 			if (key >=0){
+      
         stateM(key);
+        
 			}
 		}
 	}
@@ -202,26 +224,46 @@ int get_key(unsigned int input){
 void stateM(const unsigned int &pressKey) {
    lcd.clear();
    lcd.setCursor(0,1);  //line=2, x=0
-   lcd.write(msgs[pressKey]);
+   lcd.write(msgs[pressKey]); // E_BoardKey name
 
+  const E_BoardKey boardKey = (const E_BoardKey)pressKey;
 
-  // menu
-   // Example usage when you want to change the menu item to the second item
-   updateCurrentMenuItem(&menuItems[1]);
+  switch (boardKey) {
+    
+    case (E_RIGHT_KEY):
+      
+    break;
+    
+    case(E_UP_KEY):
+      updateCurrentMenuItem(currentMenuItem->previous);
+    break;
+    
+    case (E_DOWN_KEY):
+      updateCurrentMenuItem(currentMenuItem->next);
+    
+    break;
+    
+    case (E_LEFT_KEY):
+    
+    break;
+    
+    case (E_SELECT_KEY):
+      if (currentMenuItem->interfaceItem.btnKey == E_BtnKey_LEDS) {
+        setLed(currentMenuItem->interfaceItem.key);
+      }
+    break;
+    
+    default:
+    break;
+  }
 
-   startLed(relayWhite);
-   stopLed(relayWhite);
-
-   delay(2000);
-   startLed(_BLUE_LED);
-   stopLed(_BLUE_LED);
-
-  // menu
+  lcd.setCursor(0, 0);
+  lcd.print(currentMenuItem->interfaceItem.value);
+  Serial.println(currentMenuItem->interfaceItem.btnKey);
    
 }
 
 void startLed(unsigned int ledPin) {
-  setLed(ledPin);
   digitalWrite(ledPin, LOW);
   delay(1000);
 }
